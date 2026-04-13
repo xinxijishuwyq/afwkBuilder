@@ -71,8 +71,8 @@ jobs:
 
       - name: Prepare standalone build tools
         run: |
-          git clone https://gitcode.com/openharmony/build.git build
-          python3 -m pip install --user ./build/hb
+          git clone https://gitcode.com/openharmony/build.git audioframework/build
+          python3 -m pip install --user ./audioframework/build/hb
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
       - name: Restore prebuild cache (build mode only)
@@ -89,6 +89,8 @@ jobs:
 
       - name: Run standalone build or cache refresh
         run: |
+          cd audioframework
+
           if [ -z "$BUILD_COMMAND" ]; then
             echo "::error::Input build_command is empty. Please provide a valid standalone build command when dispatching this workflow."
             exit 1
