@@ -68,7 +68,7 @@ jobs:
       - name: Apply PR commit (if provided)
         if: ${{ env.RUN_MODE == 'build' && env.PR_COMMIT != '' }}
         run: |
-          cd multimedia_audio_framework
+          cd foundation/multimedia/audio_framework
           git fetch --all --tags
           git cherry-pick "$PR_COMMIT"
           echo "Applied PR commit: $(git rev-parse HEAD)"
@@ -179,7 +179,7 @@ jobs:
         with:
           name: standalone-worktree
           path: |
-            multimedia_audio_framework
+            foundation/multimedia/audio_framework
             build
             prebuilts
             out
