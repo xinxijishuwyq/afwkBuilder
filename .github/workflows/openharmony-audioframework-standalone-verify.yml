@@ -3,6 +3,14 @@ name: OpenHarmony AudioFramework Standalone Verify
 on:
   workflow_dispatch:
     inputs:
+      run_mode:
+        description: "Run mode: normal build or cache-only refresh"
+        required: true
+        type: choice
+        default: build
+        options:
+          - build
+          - refresh-cache
       source_repo:
         description: "AudioFramework git repo URL"
         required: true
@@ -12,21 +20,33 @@ on:
         required: true
         default: "master"
       pr_commit:
-        description: "PR commit SHA to validate (optional)"
+        description: "PR commit SHA to validate (optional, build mode only)"
         required: false
         default: ""
       build_command:
         description: "Standalone build command"
         required: true
         default: "bash build/prebuilts_config.sh && hb build audio_framework -i"
+  schedule:
+    - cron: "20 18 * * *" # 02:20 UTC+8 daily
 
 jobs:
   standalone-build:
     runs-on: ubuntu-22.04
+    env:
+      RUN_MODE: ${{ github.event_name == 'schedule' && 'refresh-cache' || github.event.inputs.run_mode || 'build' }}
+      SOURCE_REPO: ${{ github.event.inputs.source_repo || 'https://gitcode.com/openharmony/multimedia_audio_framework.git' }}
+      BASE_REF: ${{ github.event.inputs.base_ref || 'master' }}
+      PR_COMMIT: ${{ github.event.inputs.pr_commit || '' }}
+      BUILD_COMMAND: ${{ github.event.inputs.build_command || 'bash build/prebuilts_config.sh && hb build audio_framework -i' }}
 
     steps:
       - name: Checkout workflow repository
         uses: actions/checkout@v4
+
+      - name: Resolve cache key suffix
+        run: |
+          echo "CACHE_DATE=$(date -u +%Y%m%d)" >> "$GITHUB_ENV"
 
       - name: Install build dependencies
         run: |
@@ -34,9 +54,6 @@ jobs:
           sudo apt-get install -y git python3 python3-pip cmake ninja-build
 
       - name: Clone audioframework source
-        env:
-          SOURCE_REPO: ${{ github.event.inputs.source_repo }}
-          BASE_REF: ${{ github.event.inputs.base_ref }}
         run: |
           git clone "$SOURCE_REPO" audioframework
           cd audioframework
@@ -45,9 +62,7 @@ jobs:
           echo "Checked out base ref: $(git rev-parse HEAD)"
 
       - name: Apply PR commit (if provided)
-        if: ${{ github.event.inputs.pr_commit != '' }}
-        env:
-          PR_COMMIT: ${{ github.event.inputs.pr_commit }}
+        if: ${{ env.RUN_MODE == 'build' && env.PR_COMMIT != '' }}
         run: |
           cd audioframework
           git fetch --all --tags
@@ -60,16 +75,42 @@ jobs:
           python3 -m pip install --user ./build/hb
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
-      - name: Run standalone build
-        env:
-          BUILD_COMMAND: ${{ github.event.inputs.build_command }}
+      - name: Restore prebuild cache (build mode only)
+        if: ${{ env.RUN_MODE == 'build' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            audioframework/prebuilts
+            audioframework/out/prebuilts
+            ${{ github.workspace }}/.cache/prebuilts
+          key: prebuild-cache-${{ runner.os }}-${{ env.BASE_REF }}-${{ env.CACHE_DATE }}
+          restore-keys: |
+            prebuild-cache-${{ runner.os }}-${{ env.BASE_REF }}-
+
+      - name: Run standalone build or cache refresh
         run: |
           if [ -z "$BUILD_COMMAND" ]; then
             echo "::error::Input build_command is empty. Please provide a valid standalone build command when dispatching this workflow."
             exit 1
           fi
-          echo "Build command: $BUILD_COMMAND"
-          bash -lc "$BUILD_COMMAND"
+
+          if [ "$RUN_MODE" = "refresh-cache" ]; then
+            echo "Refresh-cache mode: run prebuild only, do not restore historical cache."
+            bash -lc 'bash build/prebuilts_config.sh'
+          else
+            echo "Build mode command: $BUILD_COMMAND"
+            bash -lc "$BUILD_COMMAND"
+          fi
+
+      - name: Save prebuild cache (refresh-cache mode only)
+        if: ${{ env.RUN_MODE == 'refresh-cache' }}
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            audioframework/prebuilts
+            audioframework/out/prebuilts
+            ${{ github.workspace }}/.cache/prebuilts
+          key: prebuild-cache-${{ runner.os }}-${{ env.BASE_REF }}-${{ env.CACHE_DATE }}
 
       - name: Upload build logs on failure
         if: ${{ failure() }}
