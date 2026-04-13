@@ -75,6 +75,35 @@ jobs:
           python3 -m pip install --user ./audioframework/build/hb
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
+
+      - name: Normalize vendor_hihope source (raw.gitcode -> GitHub)
+        run: |
+          python3 - <<'PY2'
+          import json
+          from pathlib import Path
+
+          cfg = Path('audioframework/build/indep_configs/config/product_component_url_config.json')
+          data = json.loads(cfg.read_text())
+
+          def normalize(url: str) -> str:
+              target_prefix = 'https://raw.gitcode.com/openharmony/vendor_hihope/raw/'
+              if not url.startswith(target_prefix):
+                  return url
+
+              # https://raw.gitcode.com/openharmony/vendor_hihope/raw/<branch>/<path>
+              tail = url[len(target_prefix):]
+              parts = tail.split('/', 1)
+              if len(parts) != 2:
+                  return url
+
+              branch, path = parts
+              return f'https://raw.githubusercontent.com/openharmony/vendor_hihope/{branch}/{path}'
+
+          updated = {k: [normalize(u) for u in v] for k, v in data.items()}
+          cfg.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + '\n')
+          print(f'Normalized product component URL config: {cfg}')
+          PY2
+
       - name: Restore prebuild cache (build mode only)
         if: ${{ env.RUN_MODE == 'build' }}
         uses: actions/cache/restore@v4
