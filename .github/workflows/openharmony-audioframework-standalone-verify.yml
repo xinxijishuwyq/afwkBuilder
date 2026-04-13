@@ -18,7 +18,7 @@ on:
       build_command:
         description: "Standalone build command"
         required: true
-        default: "./build.sh"
+        default: "bash build/prebuilts_config.sh && hb build audio_framework -i"
 
 jobs:
   standalone-build:
@@ -54,11 +54,20 @@ jobs:
           git cherry-pick "$PR_COMMIT"
           echo "Applied PR commit: $(git rev-parse HEAD)"
 
+      - name: Prepare standalone build tools
+        run: |
+          git clone https://gitcode.com/openharmony/build.git build
+          python3 -m pip install --user ./build/hb
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
       - name: Run standalone build
         env:
           BUILD_COMMAND: ${{ github.event.inputs.build_command }}
         run: |
-          cd audioframework
+          if [ -z "$BUILD_COMMAND" ]; then
+            echo "::error::Input build_command is empty. Please provide a valid standalone build command when dispatching this workflow."
+            exit 1
+          fi
           echo "Build command: $BUILD_COMMAND"
           bash -lc "$BUILD_COMMAND"
 
