@@ -11,10 +11,10 @@ on:
         options:
           - build
           - refresh-cache
-      source_repo:
-        description: "AudioFramework git repo URL"
+      manifest_repo:
+        description: "Manifest git repo URL (used by repo init)"
         required: true
-        default: "https://gitcode.com/openharmony/multimedia_audio_framework.git"
+        default: "https://gitcode.com/openharmony/manifest.git"
       base_ref:
         description: "Base branch/tag/commit to start from"
         required: true
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-22.04
     env:
       RUN_MODE: ${{ github.event_name == 'schedule' && 'refresh-cache' || github.event.inputs.run_mode || 'build' }}
-      SOURCE_REPO: ${{ github.event.inputs.source_repo || 'https://gitcode.com/openharmony/multimedia_audio_framework.git' }}
+      MANIFEST_REPO: ${{ github.event.inputs.manifest_repo || 'https://gitcode.com/openharmony/manifest.git' }}
       BASE_REF: ${{ github.event.inputs.base_ref || 'master' }}
       PR_COMMIT: ${{ github.event.inputs.pr_commit || '' }}
       BUILD_COMMAND: ${{ github.event.inputs.build_command || 'bash build/prebuilts_config.sh && hb build audio_framework -i' }}
@@ -53,26 +53,29 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y git python3 python3-pip cmake ninja-build
 
-      - name: Clone audioframework source
+      - name: Prepare repo tool
         run: |
-          git clone "$SOURCE_REPO" audioframework
-          cd audioframework
-          git fetch --all --tags
-          git checkout "$BASE_REF"
-          echo "Checked out base ref: $(git rev-parse HEAD)"
+          curl -L https://storage.googleapis.com/git-repo-downloads/repo -o repo
+          chmod +x repo
+          echo "${{ github.workspace }}" >> "$GITHUB_PATH"
+
+      - name: Repo init & sync build + audioframework
+        run: |
+          repo init -u "$MANIFEST_REPO" -b "$BASE_REF" --no-repo-verify
+          repo sync -c build multimedia_audio_framework
+          echo "Synced repositories with manifest: $MANIFEST_REPO @ $BASE_REF"
 
       - name: Apply PR commit (if provided)
         if: ${{ env.RUN_MODE == 'build' && env.PR_COMMIT != '' }}
         run: |
-          cd audioframework
+          cd multimedia_audio_framework
           git fetch --all --tags
           git cherry-pick "$PR_COMMIT"
           echo "Applied PR commit: $(git rev-parse HEAD)"
 
       - name: Prepare standalone build tools
         run: |
-          git clone https://gitcode.com/openharmony/build.git audioframework/build
-          python3 -m pip install --user ./audioframework/build/hb
+          python3 -m pip install --user ./build/hb
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
 
@@ -82,8 +85,8 @@ jobs:
           import json
           from pathlib import Path
 
-          cfg = Path('audioframework/build/indep_configs/config/product_component_url_config.json')
-          data = json.loads(cfg.read_text())
+          cfg_dir = Path('build/indep_configs/config')
+          cfg_files = sorted(cfg_dir.glob('*.json'))
 
           def normalize(url: str) -> str:
               prefix = 'https://raw.gitcode.com/openharmony/'
@@ -102,9 +105,25 @@ jobs:
 
               return f'https://raw.githubusercontent.com/openharmony/{repo}/{branch}/{path}'
 
-          updated = {k: [normalize(u) for u in v] for k, v in data.items()}
-          cfg.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + '\n')
-          print(f'Normalized product component URL config: {cfg}')
+          def walk(obj):
+              if isinstance(obj, dict):
+                  return {k: walk(v) for k, v in obj.items()}
+              if isinstance(obj, list):
+                  return [walk(v) for v in obj]
+              if isinstance(obj, str):
+                  return normalize(obj)
+              return obj
+
+          updated_count = 0
+          for cfg in cfg_files:
+              data = json.loads(cfg.read_text())
+              updated = walk(data)
+              if updated != data:
+                  cfg.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + '\n')
+                  updated_count += 1
+                  print(f'Normalized raw.gitcode URLs in: {cfg}')
+
+          print(f'Config files scanned: {len(cfg_files)}, updated: {updated_count}')
           PY2
 
       - name: Restore prebuild cache (build mode only)
@@ -112,8 +131,8 @@ jobs:
         uses: actions/cache/restore@v4
         with:
           path: |
-            audioframework/prebuilts
-            audioframework/out/prebuilts
+            prebuilts
+            out/prebuilts
             ${{ github.workspace }}/.cache/prebuilts
           key: prebuild-cache-${{ runner.os }}-${{ env.BASE_REF }}-${{ env.CACHE_DATE }}
           restore-keys: |
@@ -121,8 +140,6 @@ jobs:
 
       - name: Run standalone build or cache refresh
         run: |
-          cd audioframework
-
           if [ -z "$BUILD_COMMAND" ]; then
             echo "::error::Input build_command is empty. Please provide a valid standalone build command when dispatching this workflow."
             exit 1
@@ -141,8 +158,8 @@ jobs:
         uses: actions/cache/save@v4
         with:
           path: |
-            audioframework/prebuilts
-            audioframework/out/prebuilts
+            prebuilts
+            out/prebuilts
             ${{ github.workspace }}/.cache/prebuilts
           key: prebuild-cache-${{ runner.os }}-${{ env.BASE_REF }}-${{ env.CACHE_DATE }}
 
@@ -150,6 +167,10 @@ jobs:
         if: ${{ failure() }}
         uses: actions/upload-artifact@v4
         with:
-          name: audioframework-worktree
-          path: audioframework
+          name: standalone-worktree
+          path: |
+            multimedia_audio_framework
+            build
+            prebuilts
+            out
           if-no-files-found: ignore

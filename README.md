@@ -17,7 +17,7 @@
 1. `run_mode`：运行模式
    - `build`：正常构建（恢复缓存 + 执行 `build_command`）
    - `refresh-cache`：仅刷新缓存（不恢复历史缓存，仅执行 prebuild）
-2. `source_repo`：AudioFramework 仓库地址（默认 OpenHarmony GitCode 官方仓库）
+2. `manifest_repo`：manifest 仓库地址（用于 `repo init`，默认 OpenHarmony GitCode 官方 manifest）
 3. `base_ref`：基础分支/标签/提交
 4. `pr_commit`：要验证的 PR 提交 SHA（可选，仅 `build` 模式生效）
 5. `build_command`：独立构建命令（默认 `bash build/prebuilts_config.sh && hb build audio_framework -i`）
@@ -28,6 +28,7 @@
 - `build` 模式：
   - 恢复同分支最新缓存（通过 `restore-keys` 前缀匹配）
   - 不主动写缓存，避免每次构建都产生新缓存
+  - 缓存目录为工作区根目录下的 `prebuilts`、`out/prebuilts` 与 `.cache/prebuilts`
 - `refresh-cache` 模式（含定时任务）：
   - 不恢复任何历史缓存（避免基于旧缓存不断叠加）
   - 仅运行 `bash build/prebuilts_config.sh`
@@ -37,8 +38,9 @@
 
 - 日常 PR/分支验证速度更快（用缓存）
 - 缓存生成与业务构建分离（更可控）
-- CI 会将 `product_component_url_config.json` 里所有符合格式的 `raw.gitcode.com/openharmony/<repo>/raw/<branch>/<path>` 链接统一规范化到 `raw.githubusercontent.com/openharmony/<repo>/<branch>/<path>`。
+- CI 会扫描 `build/indep_configs/config/*.json`，将其中所有符合格式的 `raw.gitcode.com/openharmony/<repo>/raw/<branch>/<path>` 链接统一规范化到 `raw.githubusercontent.com/openharmony/<repo>/<branch>/<path>`。
 - 刷新时不吃旧缓存，避免“越滚越大”的风险
+- CI 运行时通过 `repo init + repo sync` 拉取 `build` 与 `multimedia_audio_framework`，符合部件独立编译指导中的推荐方式。
 
 ## 建议用法
 
