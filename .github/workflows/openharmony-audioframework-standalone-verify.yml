@@ -76,7 +76,7 @@ jobs:
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
 
 
-      - name: Normalize vendor_hihope source (raw.gitcode -> GitHub)
+      - name: Normalize raw.gitcode openharmony sources to GitHub
         run: |
           python3 - <<'PY2'
           import json
@@ -86,18 +86,21 @@ jobs:
           data = json.loads(cfg.read_text())
 
           def normalize(url: str) -> str:
-              target_prefix = 'https://raw.gitcode.com/openharmony/vendor_hihope/raw/'
-              if not url.startswith(target_prefix):
+              prefix = 'https://raw.gitcode.com/openharmony/'
+              if not url.startswith(prefix):
                   return url
 
-              # https://raw.gitcode.com/openharmony/vendor_hihope/raw/<branch>/<path>
-              tail = url[len(target_prefix):]
-              parts = tail.split('/', 1)
-              if len(parts) != 2:
+              # https://raw.gitcode.com/openharmony/<repo>/raw/<branch>/<path>
+              tail = url[len(prefix):]
+              parts = tail.split('/', 3)
+              if len(parts) != 4:
                   return url
 
-              branch, path = parts
-              return f'https://raw.githubusercontent.com/openharmony/vendor_hihope/{branch}/{path}'
+              repo, raw_marker, branch, path = parts
+              if raw_marker != 'raw' or not repo or not branch or not path:
+                  return url
+
+              return f'https://raw.githubusercontent.com/openharmony/{repo}/{branch}/{path}'
 
           updated = {k: [normalize(u) for u in v] for k, v in data.items()}
           cfg.write_text(json.dumps(updated, ensure_ascii=False, indent=2) + '\n')

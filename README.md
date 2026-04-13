@@ -37,7 +37,7 @@
 
 - 日常 PR/分支验证速度更快（用缓存）
 - 缓存生成与业务构建分离（更可控）
-- CI 内仅会将 `product_component_url_config.json` 里报错的 `openharmony/vendor_hihope` 链接从 `raw.gitcode.com` 规范化到 GitHub 原仓 `raw.githubusercontent.com`，其他仓库链接保持不变。
+- CI 会将 `product_component_url_config.json` 里所有符合格式的 `raw.gitcode.com/openharmony/<repo>/raw/<branch>/<path>` 链接统一规范化到 `raw.githubusercontent.com/openharmony/<repo>/<branch>/<path>`。
 - 刷新时不吃旧缓存，避免“越滚越大”的风险
 
 ## 建议用法
