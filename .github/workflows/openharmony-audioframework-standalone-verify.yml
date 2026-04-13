@@ -39,6 +39,8 @@ jobs:
       BASE_REF: ${{ github.event.inputs.base_ref || 'master' }}
       PR_COMMIT: ${{ github.event.inputs.pr_commit || '' }}
       BUILD_COMMAND: ${{ github.event.inputs.build_command || 'bash build/prebuilts_config.sh && hb build audio_framework -i' }}
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_MAXSIZE: 10G
 
     steps:
       - name: Checkout workflow repository
@@ -51,7 +53,7 @@ jobs:
       - name: Install build dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y git python3 python3-pip cmake ninja-build
+          sudo apt-get install -y git python3 python3-pip cmake ninja-build ccache
 
       - name: Prepare repo tool
         run: |
@@ -138,6 +140,22 @@ jobs:
           restore-keys: |
             prebuild-cache-${{ runner.os }}-${{ env.BASE_REF }}-
 
+      - name: Restore ccache (build mode only)
+        if: ${{ env.RUN_MODE == 'build' }}
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ env.BASE_REF }}-${{ env.CACHE_DATE }}
+          restore-keys: |
+            ccache-${{ runner.os }}-${{ env.BASE_REF }}-
+
+      - name: Initialize ccache
+        run: |
+          mkdir -p "$CCACHE_DIR"
+          ccache --set-config=max_size="$CCACHE_MAXSIZE"
+          ccache --show-config | grep -E 'cache_dir|max_size'
+          ccache -z
+
       - name: Run standalone build or cache refresh
         run: |
           if [ -z "$BUILD_COMMAND" ]; then
@@ -146,12 +164,17 @@ jobs:
           fi
 
           if [ "$RUN_MODE" = "refresh-cache" ]; then
-            echo "Refresh-cache mode: run prebuild only, do not restore historical cache."
-            bash -lc 'bash build/prebuilts_config.sh'
+            echo "Refresh-cache mode: run full build to refresh prebuild + ccache from scratch."
+            bash -lc "$BUILD_COMMAND"
           else
             echo "Build mode command: $BUILD_COMMAND"
             bash -lc "$BUILD_COMMAND"
           fi
+
+      - name: Show ccache stats
+        if: ${{ always() }}
+        run: |
+          ccache -s || true
 
       - name: Save prebuild cache (refresh-cache mode only)
         if: ${{ env.RUN_MODE == 'refresh-cache' }}
@@ -162,6 +185,13 @@ jobs:
             out/prebuilts
             ${{ github.workspace }}/.cache/prebuilts
           key: prebuild-cache-${{ runner.os }}-${{ env.BASE_REF }}-${{ env.CACHE_DATE }}
+
+      - name: Save ccache (refresh-cache mode only)
+        if: ${{ env.RUN_MODE == 'refresh-cache' }}
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.CCACHE_DIR }}
+          key: ccache-${{ runner.os }}-${{ env.BASE_REF }}-${{ env.CACHE_DATE }}
 
       - name: Upload standalone build artifacts (build mode only)
         if: ${{ env.RUN_MODE == 'build' }}

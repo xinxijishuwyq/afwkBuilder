@@ -3,7 +3,7 @@
 这个仓库提供一个 GitHub Actions 工作流，用于验证 OpenHarmony `multimedia_audio_framework` 的独立构建，并支持将 prebuild（`build/prebuilts_config.sh`）与正常构建解耦：
 
 - 正常构建：默认使用已有 prebuild 缓存，加快构建。
-- 缓存刷新：可手动触发或每日定时，仅执行 prebuild 并写入当日缓存。
+- 缓存刷新：可手动触发或每日定时，执行完整构建以刷新 prebuild 与 ccache，并写入当日缓存。
 
 ## 工作流
 
@@ -16,7 +16,7 @@
 
 1. `run_mode`：运行模式
    - `build`：正常构建（恢复缓存 + 执行 `build_command`）
-   - `refresh-cache`：仅刷新缓存（不恢复历史缓存，仅执行 prebuild）
+   - `refresh-cache`：刷新缓存（不恢复历史缓存，执行完整构建以生成 prebuild + ccache）
 2. `manifest_repo`：manifest 仓库地址（用于 `repo init`，默认 OpenHarmony GitCode 官方 manifest）
 3. `base_ref`：基础分支/标签/提交
 4. `pr_commit`：要验证的 PR 提交 SHA（可选，仅 `build` 模式生效）
@@ -25,6 +25,7 @@
 ## 缓存策略说明
 
 - 缓存键：`prebuild-cache-${runner.os}-${base_ref}-${YYYYMMDD}`
+- ccache 缓存键：`ccache-${runner.os}-${base_ref}-${YYYYMMDD}`
 - `build` 模式：
   - 恢复同分支最新缓存（通过 `restore-keys` 前缀匹配）
   - 不主动写缓存，避免每次构建都产生新缓存
@@ -32,8 +33,8 @@
   - 构建完成后自动上传编译产物（`out/**`），默认保留 7 天
 - `refresh-cache` 模式（含定时任务）：
   - 不恢复任何历史缓存（避免基于旧缓存不断叠加）
-  - 仅运行 `bash build/prebuilts_config.sh`
-  - 生成并保存当天新缓存
+  - 执行 `build_command` 完整构建（默认 `bash build/prebuilts_config.sh && hb build audio_framework -i`）
+  - 生成并保存当天新缓存（`prebuilts` + `ccache`）
 
 这样可以做到：
 
@@ -41,6 +42,7 @@
 - 缓存生成与业务构建分离（更可控）
 - CI 会扫描 `build/indep_configs/config/*.json`，将其中所有符合格式的 `raw.gitcode.com/openharmony/<repo>/raw/<branch>/<path>` 链接统一规范化到 `raw.githubusercontent.com/openharmony/<repo>/<branch>/<path>`。
 - 刷新时不吃旧缓存，避免“越滚越大”的风险
+- 构建流程启用 `ccache`，并在刷新模式中落盘缓存，供后续 `build` 模式恢复
 - CI 运行时通过 `repo init + repo sync` 拉取 `build` 与 `multimedia_audio_framework`，符合部件独立编译指导中的推荐方式。
 
 ## 建议用法
