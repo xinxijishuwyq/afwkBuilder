@@ -21,6 +21,7 @@
 3. `base_ref`：基础分支/标签/提交
 4. `pr_commit`：要验证的 PR 提交 SHA（可选，仅 `build` 模式生效）
 5. `build_command`：独立构建命令（默认 `bash build/prebuilts_config.sh && hb build audio_framework -i`）
+6. `ut_build_command`：UT 独立编译命令（默认 `hb build audio_framework -t`，仅在 `build` 模式独立执行一次）
 
 ## 缓存策略说明
 
@@ -30,6 +31,7 @@
   - 恢复同分支最新缓存（通过 `restore-keys` 前缀匹配）
   - 不主动写缓存，避免每次构建都产生新缓存
   - 缓存目录为工作区根目录下的 `prebuilts`、`out/prebuilts` 与 `.cache/prebuilts`
+  - 主构建完成后，额外独立执行一次 UT 编译（默认 `hb build audio_framework -t`）
   - 构建完成后自动上传编译产物（`out/**`），默认保留 7 天
 - `refresh-cache` 模式（含定时任务）：
   - 不恢复任何历史缓存（避免基于旧缓存不断叠加）
