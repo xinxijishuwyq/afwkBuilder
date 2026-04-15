@@ -27,6 +27,10 @@ on:
         description: "Standalone build command"
         required: true
         default: "bash build/prebuilts_config.sh && hb build audio_framework -i"
+      ut_build_command:
+        description: "UT standalone compile command (executed once with -t in build mode)"
+        required: true
+        default: "hb build audio_framework -t"
   schedule:
     - cron: "20 18 * * *" # 02:20 UTC+8 daily
 
@@ -39,6 +43,7 @@ jobs:
       BASE_REF: ${{ github.event.inputs.base_ref || 'master' }}
       PR_COMMIT: ${{ github.event.inputs.pr_commit || '' }}
       BUILD_COMMAND: ${{ github.event.inputs.build_command || 'bash build/prebuilts_config.sh && hb build audio_framework -i' }}
+      UT_BUILD_COMMAND: ${{ github.event.inputs.ut_build_command || 'hb build audio_framework -t' }}
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_MAXSIZE: 10G
 
@@ -170,6 +175,17 @@ jobs:
             echo "Build mode command: $BUILD_COMMAND"
             bash -lc "$BUILD_COMMAND"
           fi
+
+      - name: Run standalone UT compile once (-t, build mode only)
+        if: ${{ env.RUN_MODE == 'build' }}
+        run: |
+          if [ -z "$UT_BUILD_COMMAND" ]; then
+            echo "::error::Input ut_build_command is empty. Please provide a valid UT compile command."
+            exit 1
+          fi
+
+          echo "UT compile command: $UT_BUILD_COMMAND"
+          bash -lc "$UT_BUILD_COMMAND"
 
       - name: Show ccache stats
         if: ${{ always() }}
