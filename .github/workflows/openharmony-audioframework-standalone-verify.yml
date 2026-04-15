@@ -23,6 +23,10 @@ on:
         description: "PR commit SHA to validate (optional, build mode only)"
         required: false
         default: ""
+      pr_fetch_spec:
+        description: "PR fetch spec (optional, e.g. '<repo_url> +refs/merge-requests/14808/head:pr_14808')"
+        required: false
+        default: ""
       build_command:
         description: "Standalone build command"
         required: true
@@ -42,6 +46,7 @@ jobs:
       MANIFEST_REPO: ${{ github.event.inputs.manifest_repo || 'https://gitcode.com/openharmony/manifest.git' }}
       BASE_REF: ${{ github.event.inputs.base_ref || 'master' }}
       PR_COMMIT: ${{ github.event.inputs.pr_commit || '' }}
+      PR_FETCH_SPEC: ${{ github.event.inputs.pr_fetch_spec || '' }}
       BUILD_COMMAND: ${{ github.event.inputs.build_command || 'bash build/prebuilts_config.sh && hb build audio_framework -i' }}
       UT_BUILD_COMMAND: ${{ github.event.inputs.ut_build_command || 'hb build audio_framework -t' }}
       CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -72,8 +77,35 @@ jobs:
           repo sync -c build multimedia_audio_framework
           echo "Synced repositories with manifest: $MANIFEST_REPO @ $BASE_REF"
 
-      - name: Apply PR commit (if provided)
-        if: ${{ env.RUN_MODE == 'build' && env.PR_COMMIT != '' }}
+      - name: Apply PR fetch spec (if provided)
+        if: ${{ env.RUN_MODE == 'build' && env.PR_FETCH_SPEC != '' }}
+        run: |
+          cd foundation/multimedia/audio_framework
+          git fetch --all --tags
+
+          REPO_URL="$(echo "$PR_FETCH_SPEC" | awk '{print $1}')"
+          REFSPEC="$(echo "$PR_FETCH_SPEC" | awk '{print $2}')"
+
+          if [ -z "$REPO_URL" ] || [ -z "$REFSPEC" ]; then
+            echo "::error::Invalid pr_fetch_spec. Expected format: <repo_url> <refspec>"
+            echo "::error::Example: https://gitcode.com/openharmony/multimedia_audio_framework.git +refs/merge-requests/14808/head:pr_14808"
+            exit 1
+          fi
+
+          git fetch "$REPO_URL" "$REFSPEC"
+
+          TARGET_REF="${REFSPEC#*:}"
+          if [ "$TARGET_REF" != "$REFSPEC" ] && [ -n "$TARGET_REF" ]; then
+            git checkout "$TARGET_REF"
+          else
+            git checkout FETCH_HEAD
+          fi
+
+          echo "Applied PR fetch spec: $PR_FETCH_SPEC"
+          echo "Current HEAD: $(git rev-parse HEAD)"
+
+      - name: Apply PR commit (if provided and no fetch spec)
+        if: ${{ env.RUN_MODE == 'build' && env.PR_FETCH_SPEC == '' && env.PR_COMMIT != '' }}
         run: |
           cd foundation/multimedia/audio_framework
           git fetch --all --tags
