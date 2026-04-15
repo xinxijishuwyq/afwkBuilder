@@ -83,12 +83,45 @@ jobs:
           cd foundation/multimedia/audio_framework
           git fetch --all --tags
 
-          REPO_URL="$(echo "$PR_FETCH_SPEC" | awk '{print $1}')"
-          REFSPEC="$(echo "$PR_FETCH_SPEC" | awk '{print $2}')"
+          PARSED="$(python3 - <<'PY'
+          import os
+          import re
+          import shlex
+          from urllib.parse import unquote
+
+          raw = os.environ.get("PR_FETCH_SPEC", "").strip()
+          decoded = unquote(raw)
+          decoded = re.sub(r"\s+", " ", decoded).strip()
+
+          repo_url = ""
+          refspec = ""
+
+          if decoded:
+              parts = shlex.split(decoded)
+              if len(parts) >= 2:
+                  repo_url, refspec = parts[0], parts[1]
+              else:
+                  candidate = parts[0]
+                  marker = "refs/"
+                  idx = candidate.find(marker)
+                  if idx > 0:
+                      repo_url = candidate[:idx]
+                      refspec = candidate[idx:]
+                      if repo_url.endswith("+"):
+                          repo_url = repo_url[:-1]
+
+          print(repo_url)
+          print(refspec)
+          PY
+          )"
+
+          REPO_URL="$(echo "$PARSED" | sed -n '1p')"
+          REFSPEC="$(echo "$PARSED" | sed -n '2p')"
 
           if [ -z "$REPO_URL" ] || [ -z "$REFSPEC" ]; then
             echo "::error::Invalid pr_fetch_spec. Expected format: <repo_url> <refspec>"
             echo "::error::Example: https://gitcode.com/openharmony/multimedia_audio_framework.git +refs/merge-requests/14808/head:pr_14808"
+            echo "::error::Also supported: URL-encoded input such as https://...git%20+refs/merge-requests/14808/head:pr_14808"
             exit 1
           fi
 
