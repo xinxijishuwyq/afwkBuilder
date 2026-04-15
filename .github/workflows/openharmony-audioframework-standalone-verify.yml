@@ -27,6 +27,10 @@ on:
         description: "PR fetch spec (optional, e.g. '<repo_url> +refs/merge-requests/14808/head:pr_14808')"
         required: false
         default: ""
+      pr_patch_url:
+        description: "PR patch URL (optional, build mode only, e.g. 'https://gitcode.com/openharmony/multimedia_audio_framework/pull/14808.patch')"
+        required: false
+        default: ""
       build_command:
         description: "Standalone build command"
         required: true
@@ -47,6 +51,7 @@ jobs:
       BASE_REF: ${{ github.event.inputs.base_ref || 'master' }}
       PR_COMMIT: ${{ github.event.inputs.pr_commit || '' }}
       PR_FETCH_SPEC: ${{ github.event.inputs.pr_fetch_spec || '' }}
+      PR_PATCH_URL: ${{ github.event.inputs.pr_patch_url || '' }}
       BUILD_COMMAND: ${{ github.event.inputs.build_command || 'bash build/prebuilts_config.sh && hb build audio_framework -i' }}
       UT_BUILD_COMMAND: ${{ github.event.inputs.ut_build_command || 'hb build audio_framework -t' }}
       CCACHE_DIR: ${{ github.workspace }}/.ccache
@@ -77,8 +82,43 @@ jobs:
           repo sync -c build multimedia_audio_framework
           echo "Synced repositories with manifest: $MANIFEST_REPO @ $BASE_REF"
 
-      - name: Apply PR fetch spec (if provided)
-        if: ${{ env.RUN_MODE == 'build' && env.PR_FETCH_SPEC != '' }}
+      - name: Apply PR patch URL (if provided)
+        if: ${{ env.RUN_MODE == 'build' && env.PR_PATCH_URL != '' }}
+        run: |
+          cd foundation/multimedia/audio_framework
+          PATCH_URL="$(python3 - <<'PY'
+          import os
+          from urllib.parse import unquote
+
+          raw = os.environ.get("PR_PATCH_URL", "").strip()
+          print(unquote(raw))
+          PY
+          )"
+
+          if [ -z "$PATCH_URL" ]; then
+            echo "::error::pr_patch_url is empty after decoding."
+            exit 1
+          fi
+          if [[ "$PATCH_URL" != http://* && "$PATCH_URL" != https://* ]]; then
+            echo "::error::Invalid pr_patch_url. URL must start with http:// or https://"
+            exit 1
+          fi
+
+          TMP_PATCH="$(mktemp --suffix=.patch)"
+          trap 'rm -f "$TMP_PATCH"' EXIT
+          curl -fL "$PATCH_URL" -o "$TMP_PATCH"
+
+          if ! git apply --check "$TMP_PATCH"; then
+            echo "::error::Patch check failed. Please verify base_ref and patch URL."
+            exit 1
+          fi
+
+          git apply "$TMP_PATCH"
+          echo "Applied PR patch URL: $PATCH_URL"
+          echo "Current HEAD: $(git rev-parse HEAD)"
+
+      - name: Apply PR fetch spec (if provided and no patch URL)
+        if: ${{ env.RUN_MODE == 'build' && env.PR_PATCH_URL == '' && env.PR_FETCH_SPEC != '' }}
         run: |
           cd foundation/multimedia/audio_framework
           git fetch --all --tags
@@ -137,8 +177,8 @@ jobs:
           echo "Applied PR fetch spec: $PR_FETCH_SPEC"
           echo "Current HEAD: $(git rev-parse HEAD)"
 
-      - name: Apply PR commit (if provided and no fetch spec)
-        if: ${{ env.RUN_MODE == 'build' && env.PR_FETCH_SPEC == '' && env.PR_COMMIT != '' }}
+      - name: Apply PR commit (if provided and no patch URL/fetch spec)
+        if: ${{ env.RUN_MODE == 'build' && env.PR_PATCH_URL == '' && env.PR_FETCH_SPEC == '' && env.PR_COMMIT != '' }}
         run: |
           cd foundation/multimedia/audio_framework
           git fetch --all --tags
