@@ -23,6 +23,7 @@
 5. `pr_fetch_spec`：PR 拉取规格（可选，仅 `build` 模式生效），格式：
    - `<repo_url> <refspec>`
    - 示例：`https://gitcode.com/openharmony/multimedia_audio_framework.git +refs/merge-requests/14808/head:pr_14808`
+   - 兼容 URL 编码输入（如把空格写成 `%20`）：`https://gitcode.com/openharmony/multimedia_audio_framework.git%20+refs/merge-requests/14808/head:pr_14808`
    - 配置后会优先于 `pr_commit` 执行（即先 `git fetch <repo_url> <refspec>`，再检出目标引用）
 6. `build_command`：独立构建命令（默认 `bash build/prebuilts_config.sh && hb build audio_framework -i`）
 7. `ut_build_command`：UT 独立编译命令（默认 `hb build audio_framework -t`，仅在 `build` 模式独立执行一次）
