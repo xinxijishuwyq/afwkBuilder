@@ -108,13 +108,23 @@ jobs:
           trap 'rm -f "$TMP_PATCH"' EXIT
           curl -fL "$PATCH_URL" -o "$TMP_PATCH"
 
-          if ! git apply --check "$TMP_PATCH"; then
-            echo "::error::Patch check failed. Please verify base_ref and patch URL."
-            exit 1
+          # Prefer git am for mailbox patches (supports multi-commit PR/MR patch URLs).
+          # Fallback to git apply for plain diff patches.
+          if git am --3way --keep-non-patch "$TMP_PATCH"; then
+            APPLIED_MODE="git am"
+          else
+            echo "::warning::git am failed, fallback to git apply."
+            git am --abort || true
+
+            if ! git apply --check "$TMP_PATCH"; then
+              echo "::error::Patch check failed for both git am and git apply. Please verify base_ref and patch URL."
+              exit 1
+            fi
+            git apply "$TMP_PATCH"
+            APPLIED_MODE="git apply"
           fi
 
-          git apply "$TMP_PATCH"
-          echo "Applied PR patch URL: $PATCH_URL"
+          echo "Applied PR patch URL via ${APPLIED_MODE}: $PATCH_URL"
           echo "Current HEAD: $(git rev-parse HEAD)"
 
       - name: Apply PR fetch spec (if provided and no patch URL)
