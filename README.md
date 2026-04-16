@@ -22,7 +22,8 @@
 4. `pr_patch_url`：PR patch 链接（可选，仅 `build` 模式生效），例如：
    - `https://gitcode.com/openharmony/multimedia_audio_framework/pull/14808.patch`
    - 支持 URL 编码输入（会自动解码）
-   - 配置后会优先于 `pr_fetch_spec` / `pr_commit` 执行（通过下载 patch 后本地 `git apply`）
+   - 配置后会优先于 `pr_fetch_spec` / `pr_commit` 执行（通过下载 patch 后优先 `git am --3way`，失败时回退 `git apply`）
+   - 支持包含多笔 commit 的 mailbox patch（常见于 PR/MR `.patch` 链接）
 5. `pr_fetch_spec`：PR 拉取规格（可选，仅 `build` 模式生效），格式：
    - `<repo_url> <refspec>`
    - 示例：`https://gitcode.com/openharmony/multimedia_audio_framework.git +refs/merge-requests/14808/head:pr_14808`
