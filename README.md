@@ -19,19 +19,25 @@
    - `refresh-cache`：刷新缓存（不恢复历史缓存，执行完整构建以生成 prebuild + ccache）
 2. `manifest_repo`：manifest 仓库地址（用于 `repo init`，默认 OpenHarmony GitCode 官方 manifest）
 3. `base_ref`：基础分支/标签/提交
-4. `pr_patch_url`：PR patch 链接（可选，仅 `build` 模式生效），例如：
+4. `pr_patch_content`：PR patch 内容（可选，仅 `build` 模式生效）
+   - 支持直接粘贴 patch/mailbox 内容
+   - 支持 URL 编码内容（会自动解码）
+   - 支持 `base64:<payload>` 格式（会自动 Base64 解码）
+   - 配置后优先级最高：会优先于 `pr_patch_url` / `pr_fetch_spec` / `pr_commit` 执行
+   - 通过 `git am --3way` 优先应用，失败时回退 `git apply`
+5. `pr_patch_url`：PR patch 链接（可选，仅 `build` 模式生效），例如：
    - `https://gitcode.com/openharmony/multimedia_audio_framework/pull/14808.patch`
    - 支持 URL 编码输入（会自动解码）
-   - 配置后会优先于 `pr_fetch_spec` / `pr_commit` 执行（通过下载 patch 后优先 `git am --3way`，失败时回退 `git apply`）
+   - 当 `pr_patch_content` 为空时，配置后会优先于 `pr_fetch_spec` / `pr_commit` 执行（通过下载 patch 后优先 `git am --3way`，失败时回退 `git apply`）
    - 支持包含多笔 commit 的 mailbox patch（常见于 PR/MR `.patch` 链接）
-5. `pr_fetch_spec`：PR 拉取规格（可选，仅 `build` 模式生效），格式：
+6. `pr_fetch_spec`：PR 拉取规格（可选，仅 `build` 模式生效），格式：
    - `<repo_url> <refspec>`
    - 示例：`https://gitcode.com/openharmony/multimedia_audio_framework.git +refs/merge-requests/14808/head:pr_14808`
    - 兼容 URL 编码输入（如把空格写成 `%20`）：`https://gitcode.com/openharmony/multimedia_audio_framework.git%20+refs/merge-requests/14808/head:pr_14808`
-   - 当 `pr_patch_url` 为空时，配置后会优先于 `pr_commit` 执行（即先 `git fetch <repo_url> <refspec>`，再检出目标引用）
-6. `pr_commit`：要验证的 PR 提交 SHA（可选，仅 `build` 模式生效；当 `pr_patch_url` 和 `pr_fetch_spec` 都为空时生效）
-7. `build_command`：独立构建命令（默认 `bash build/prebuilts_config.sh && hb build audio_framework -i`）
-8. `ut_build_command`：UT 独立编译命令（默认 `hb build audio_framework -t`，仅在 `build` 模式独立执行一次）
+   - 当 `pr_patch_content` 与 `pr_patch_url` 都为空时，配置后会优先于 `pr_commit` 执行（即先 `git fetch <repo_url> <refspec>`，再检出目标引用）
+7. `pr_commit`：要验证的 PR 提交 SHA（可选，仅 `build` 模式生效；当 `pr_patch_content`、`pr_patch_url` 和 `pr_fetch_spec` 都为空时生效）
+8. `build_command`：独立构建命令（默认 `bash build/prebuilts_config.sh && hb build audio_framework -i`）
+9. `ut_build_command`：UT 独立编译命令（默认 `hb build audio_framework -t`，仅在 `build` 模式独立执行一次）
 
 ## 缓存策略说明
 
@@ -65,10 +71,20 @@
 
 - `run_mode`: `build`
 - `base_ref`: 目标分支（例如 `master`）
+- `pr_patch_content`: 可直接粘贴 patch 内容（推荐）
 - `pr_patch_url`: 推荐直接填 PR patch 链接（如 `https://gitcode.com/openharmony/multimedia_audio_framework/pull/14808.patch`）
 - 或 `pr_fetch_spec`: PR 拉取规格（如 `https://gitcode.com/openharmony/multimedia_audio_framework.git +refs/merge-requests/14808/head:pr_14808`）
 - 或 `pr_commit`: 要验证的 PR commit SHA
 - `build_command`: 你的独立构建命令
+
+如需从本地 patch 文件触发，可通过 GitHub CLI 把文件内容传给 `pr_patch_content`：
+
+```bash
+gh workflow run openharmony-audioframework-standalone-verify.yml \
+  -f run_mode=build \
+  -f base_ref=master \
+  -F pr_patch_content=@./pr_14808.patch
+```
 
 ### 2) 手动刷新 prebuild 缓存
 
