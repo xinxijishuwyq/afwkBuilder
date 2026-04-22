@@ -27,6 +27,10 @@ on:
         description: "PR fetch spec (optional, e.g. '<repo_url> +refs/merge-requests/14808/head:pr_14808')"
         required: false
         default: ""
+      pr_patch_content:
+        description: "PR patch content (optional, build mode only; supports raw patch, URL-encoded patch, or 'base64:<payload>')"
+        required: false
+        default: ""
       pr_patch_url:
         description: "PR patch URL (optional, build mode only, e.g. 'https://gitcode.com/openharmony/multimedia_audio_framework/pull/14808.patch')"
         required: false
@@ -51,6 +55,7 @@ jobs:
       BASE_REF: ${{ github.event.inputs.base_ref || 'master' }}
       PR_COMMIT: ${{ github.event.inputs.pr_commit || '' }}
       PR_FETCH_SPEC: ${{ github.event.inputs.pr_fetch_spec || '' }}
+      PR_PATCH_CONTENT: ${{ github.event.inputs.pr_patch_content || '' }}
       PR_PATCH_URL: ${{ github.event.inputs.pr_patch_url || '' }}
       BUILD_COMMAND: ${{ github.event.inputs.build_command || 'bash build/prebuilts_config.sh && hb build audio_framework -i' }}
       UT_BUILD_COMMAND: ${{ github.event.inputs.ut_build_command || 'hb build audio_framework -t' }}
@@ -82,8 +87,55 @@ jobs:
           repo sync -c build multimedia_audio_framework
           echo "Synced repositories with manifest: $MANIFEST_REPO @ $BASE_REF"
 
-      - name: Apply PR patch URL (if provided)
-        if: ${{ env.RUN_MODE == 'build' && env.PR_PATCH_URL != '' }}
+      - name: Apply PR patch content (if provided)
+        if: ${{ env.RUN_MODE == 'build' && env.PR_PATCH_CONTENT != '' }}
+        run: |
+          cd foundation/multimedia/audio_framework
+          TMP_PATCH="$(mktemp --suffix=.patch)"
+          trap 'rm -f "$TMP_PATCH"' EXIT
+
+          python3 - "$TMP_PATCH" <<'PY'
+          import base64
+          import os
+          import sys
+          from urllib.parse import unquote
+
+          output = sys.argv[1]
+          raw = os.environ.get("PR_PATCH_CONTENT", "").strip()
+          decoded = unquote(raw)
+
+          if decoded.startswith("base64:"):
+              payload = decoded[len("base64:"):].strip()
+              decoded = base64.b64decode(payload).decode("utf-8")
+
+          if not decoded.strip():
+              raise SystemExit("::error::pr_patch_content is empty after decoding.")
+
+          with open(output, "w", encoding="utf-8") as fp:
+              fp.write(decoded)
+          PY
+
+          # Prefer git am for mailbox patches (supports multi-commit PR/MR patch URLs).
+          # Fallback to git apply for plain diff patches.
+          if git am --3way --keep-non-patch "$TMP_PATCH"; then
+            APPLIED_MODE="git am"
+          else
+            echo "::warning::git am failed, fallback to git apply."
+            git am --abort || true
+
+            if ! git apply --check "$TMP_PATCH"; then
+              echo "::error::Patch check failed for both git am and git apply. Please verify base_ref and patch URL."
+              exit 1
+            fi
+            git apply "$TMP_PATCH"
+            APPLIED_MODE="git apply"
+          fi
+
+          echo "Applied PR patch content via ${APPLIED_MODE}."
+          echo "Current HEAD: $(git rev-parse HEAD)"
+
+      - name: Apply PR patch URL (if provided and no patch content)
+        if: ${{ env.RUN_MODE == 'build' && env.PR_PATCH_CONTENT == '' && env.PR_PATCH_URL != '' }}
         run: |
           cd foundation/multimedia/audio_framework
           PATCH_URL="$(python3 - <<'PY'
@@ -127,8 +179,8 @@ jobs:
           echo "Applied PR patch URL via ${APPLIED_MODE}: $PATCH_URL"
           echo "Current HEAD: $(git rev-parse HEAD)"
 
-      - name: Apply PR fetch spec (if provided and no patch URL)
-        if: ${{ env.RUN_MODE == 'build' && env.PR_PATCH_URL == '' && env.PR_FETCH_SPEC != '' }}
+      - name: Apply PR fetch spec (if provided and no patch content/URL)
+        if: ${{ env.RUN_MODE == 'build' && env.PR_PATCH_CONTENT == '' && env.PR_PATCH_URL == '' && env.PR_FETCH_SPEC != '' }}
         run: |
           cd foundation/multimedia/audio_framework
           git fetch --all --tags
@@ -187,8 +239,8 @@ jobs:
           echo "Applied PR fetch spec: $PR_FETCH_SPEC"
           echo "Current HEAD: $(git rev-parse HEAD)"
 
-      - name: Apply PR commit (if provided and no patch URL/fetch spec)
-        if: ${{ env.RUN_MODE == 'build' && env.PR_PATCH_URL == '' && env.PR_FETCH_SPEC == '' && env.PR_COMMIT != '' }}
+      - name: Apply PR commit (if provided and no patch content/URL/fetch spec)
+        if: ${{ env.RUN_MODE == 'build' && env.PR_PATCH_CONTENT == '' && env.PR_PATCH_URL == '' && env.PR_FETCH_SPEC == '' && env.PR_COMMIT != '' }}
         run: |
           cd foundation/multimedia/audio_framework
           git fetch --all --tags
