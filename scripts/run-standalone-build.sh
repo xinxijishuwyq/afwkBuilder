@@ -44,6 +44,6 @@ if [ ! -d "$TARGET_DIR" ]; then
   exit 1
 fi
 
-cd "$TARGET_DIR"
+cd "$WORKSPACE_DIR"
 bash -lc "$BUILD_COMMAND"
 bash -lc "$UT_BUILD_COMMAND"
