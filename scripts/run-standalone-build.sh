@@ -16,21 +16,30 @@ repo sync -c ${SYNC_PROJECTS}
 
 echo "Synced repositories with manifest: $MANIFEST_REPO @ $BASE_REF"
 
-TARGET_DIR="foundation/multimedia/audio_framework"
+WORKSPACE_DIR="$(pwd)"
+TARGET_DIR="$WORKSPACE_DIR/foundation/multimedia/audio_framework"
+TARGET_PARENT_DIR="$(dirname "$TARGET_DIR")"
 if [ -n "$AUDIO_FRAMEWORK_DIR" ]; then
   if [ ! -d "$AUDIO_FRAMEWORK_DIR" ]; then
     echo "::error::AUDIO_FRAMEWORK_DIR does not exist: $AUDIO_FRAMEWORK_DIR"
     exit 1
   fi
 
-  mkdir -p "$(dirname "$TARGET_DIR")"
+  if [ -e "$TARGET_PARENT_DIR" ] && [ ! -d "$TARGET_PARENT_DIR" ]; then
+    echo "::error::Target parent path exists but is not a directory: $TARGET_PARENT_DIR"
+    exit 1
+  fi
+
+  mkdir -p "$TARGET_PARENT_DIR"
   rm -rf "$TARGET_DIR"
+  mkdir -p "$TARGET_PARENT_DIR"
   ln -s "$AUDIO_FRAMEWORK_DIR" "$TARGET_DIR"
   echo "Using external audio framework directory: $AUDIO_FRAMEWORK_DIR"
 fi
 
 if [ ! -d "$TARGET_DIR" ]; then
   echo "::error::audio_framework source not found at $TARGET_DIR. Please set AUDIO_FRAMEWORK_DIR to a mounted local path."
+  echo "::error::Debug info: pwd=$PWD, target_parent_exists=$([ -d "$TARGET_PARENT_DIR" ] && echo yes || echo no)"
   exit 1
 fi
 
