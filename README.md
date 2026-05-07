@@ -63,6 +63,43 @@
 - 构建流程启用 `ccache`，并在刷新模式中落盘缓存，供后续 `build` 模式恢复
 - CI 运行时通过 `repo init + repo sync` 拉取 `build` 与 `multimedia_audio_framework`，符合部件独立编译指导中的推荐方式。
 
+
+## Docker 独立化编译
+
+仓库内提供了 `Dockerfile` 与 `scripts/run-standalone-build.sh`，可在本地/自建 CI 中以容器方式执行与 Action 一致的“repo init + repo sync + 独立编译”流程。
+
+### 1) 构建镜像
+
+```bash
+docker build -t afwk-standalone-builder .
+```
+
+### 2) 运行容器进行编译
+
+```bash
+docker run --rm -it \
+  -e BASE_REF=master \
+  -e AUDIO_FRAMEWORK_DIR=/external/audio_framework \
+  -v "$PWD/workdir:/work" \
+  -v "$PWD/my_audio_framework:/external/audio_framework" \
+  afwk-standalone-builder
+```
+
+说明：
+- manifest 仓库地址已在脚本内固定为 `https://gitcode.com/openharmony/manifest.git`。
+- 默认只同步 `build` 项目，不再同步 `multimedia_audio_framework`。
+- `BASE_REF`：同步分支/标签。
+- 构建命令已在脚本内固定为：先执行 `bash build/prebuilts_config.sh && hb build audio_framework -i`，再执行测试编译 `hb build audio_framework -t`。
+- `AUDIO_FRAMEWORK_DIR`：建议设置；指定容器内的外部 `audio_framework` 目录（可带本地修改）。默认不再同步 `multimedia_audio_framework`。
+- `-v $PWD/workdir:/work`：建议挂载本地目录，保留 `.repo`、源码与构建产物缓存。
+- `-v $PWD/my_audio_framework:/external/audio_framework`：把宿主机本地源码挂到容器，并通过 `AUDIO_FRAMEWORK_DIR` 启用。
+
+如需只同步指定项目，可额外传入：
+
+```bash
+-e SYNC_PROJECTS='build'
+```
+
 ## 建议用法
 
 
