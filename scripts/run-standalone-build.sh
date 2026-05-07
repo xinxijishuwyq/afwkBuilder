@@ -23,6 +23,7 @@ if [ -n "$AUDIO_FRAMEWORK_DIR" ]; then
     exit 1
   fi
 
+  mkdir -p "$(dirname "$TARGET_DIR")"
   rm -rf "$TARGET_DIR"
   ln -s "$AUDIO_FRAMEWORK_DIR" "$TARGET_DIR"
   echo "Using external audio framework directory: $AUDIO_FRAMEWORK_DIR"
