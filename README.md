@@ -29,25 +29,15 @@ docker run --rm -it \
 ## 参数说明
 
 - `BASE_REF`：同步使用的分支/标签（默认 `master`）。
-- `AUDIO_FRAMEWORK_DIR`：容器内外部 `audio_framework` 目录；用于挂载本地修改源码。
-- `SYNC_PROJECTS`：可选，控制 `repo sync` 项目，默认仅同步 `build`。
-
-示例：只同步 `build`。
-
-```bash
-docker run --rm -it \
-  -e BASE_REF=master \
-  -e SYNC_PROJECTS='build' \
-  -v "$PWD/workdir:/work" \
-  afwk-standalone-builder
-```
+- `AUDIO_FRAMEWORK_DIR`：容器内外部 `audio_framework` 目录；用于挂载本地修改源码。脚本会在链接后校验软链接是否创建成功且目标路径一致。
+- 脚本内固定执行：`repo sync -c build multimedia_audio_framework`（先拉取 audio_framework 基线，再按需覆盖本地代码）。
 
 ## 构建流程
 
 容器内脚本会按固定流程执行：
 
 1. `repo init` 拉取 OpenHarmony manifest。
-2. `repo sync` 同步所需项目（默认 `build`）。
+2. `repo sync` 同步所需项目（固定执行 `repo sync -c build multimedia_audio_framework`）。
 3. 执行独立构建命令：
    - `bash build/prebuilts_config.sh && hb build audio_framework -i`
 4. 执行一次测试编译：

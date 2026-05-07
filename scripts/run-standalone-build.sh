@@ -5,14 +5,15 @@ MANIFEST_REPO="https://gitcode.com/openharmony/manifest.git"
 : "${BASE_REF:=master}"
 BUILD_COMMAND="bash build/prebuilts_config.sh && hb build audio_framework -i"
 UT_BUILD_COMMAND="hb build audio_framework -t"
-: "${SYNC_PROJECTS:=build}"
 : "${AUDIO_FRAMEWORK_DIR:=}"
 
 if [ ! -d .repo ]; then
   repo init -u "$MANIFEST_REPO" -b "$BASE_REF" --no-repo-verify
 fi
 
-repo sync -c ${SYNC_PROJECTS}
+repo sync -c build multimedia_audio_framework
+
+echo "repo sync finished for: build multimedia_audio_framework"
 
 echo "Synced repositories with manifest: $MANIFEST_REPO @ $BASE_REF"
 
@@ -35,7 +36,20 @@ if [ -n "$AUDIO_FRAMEWORK_DIR" ]; then
   rm -rf "$TARGET_DIR"
   mkdir -p "$TARGET_PARENT_DIR"
   ln -s "$AUDIO_FRAMEWORK_DIR" "$TARGET_DIR"
+
+  if [ ! -L "$TARGET_DIR" ]; then
+    echo "::error::Failed to create symlink: $TARGET_DIR"
+    exit 1
+  fi
+
+  LINK_TARGET="$(readlink "$TARGET_DIR")"
+  if [ "$LINK_TARGET" != "$AUDIO_FRAMEWORK_DIR" ]; then
+    echo "::error::Symlink target mismatch: expected=$AUDIO_FRAMEWORK_DIR actual=$LINK_TARGET"
+    exit 1
+  fi
+
   echo "Using external audio framework directory: $AUDIO_FRAMEWORK_DIR"
+  echo "Symlink verified: $TARGET_DIR -> $LINK_TARGET"
 fi
 
 if [ ! -d "$TARGET_DIR" ]; then
