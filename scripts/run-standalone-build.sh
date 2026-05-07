@@ -16,6 +16,7 @@ repo sync -c ${SYNC_PROJECTS}
 
 echo "Synced repositories with manifest: $MANIFEST_REPO @ $BASE_REF"
 
+
 WORKSPACE_DIR="$(pwd)"
 TARGET_DIR="$WORKSPACE_DIR/foundation/multimedia/audio_framework"
 TARGET_PARENT_DIR="$(dirname "$TARGET_DIR")"
