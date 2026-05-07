@@ -45,5 +45,23 @@ if [ ! -d "$TARGET_DIR" ]; then
 fi
 
 cd "$WORKSPACE_DIR"
-bash -lc "$BUILD_COMMAND"
-bash -lc "$UT_BUILD_COMMAND"
+
+ensure_hb() {
+  export PATH="$HOME/.local/bin:$PATH"
+  if command -v hb >/dev/null 2>&1; then
+    return
+  fi
+
+  echo "hb not found, install it with: python3 -m pip install --user build/hb"
+  python3 -m pip install --user build/hb
+  export PATH="$HOME/.local/bin:$PATH"
+
+  if ! command -v hb >/dev/null 2>&1; then
+    echo "::error::hb installation finished but command is still unavailable."
+    exit 1
+  fi
+}
+
+ensure_hb
+$BUILD_COMMAND
+$UT_BUILD_COMMAND
