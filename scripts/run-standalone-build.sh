@@ -62,6 +62,16 @@ ensure_hb() {
   fi
 }
 
+ensure_python_deps() {
+  # hb runtime imports build/hb modules with system Python; ensure required deps exist there.
+  if ! python3 -c "import jinja2" >/dev/null 2>&1; then
+    echo "Installing missing Python dependency: jinja2"
+    python3 -m pip install --user jinja2
+  fi
+}
+
+
 ensure_hb
+ensure_python_deps
 $BUILD_COMMAND
 $UT_BUILD_COMMAND
