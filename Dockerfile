@@ -8,6 +8,7 @@ RUN apt-get update \
        ca-certificates \
        curl \
        git \
+       git-lfs \
        python3 \
        python3-pip \
        cmake \
