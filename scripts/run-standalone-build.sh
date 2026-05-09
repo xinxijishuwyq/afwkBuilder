@@ -7,8 +7,19 @@ BUILD_COMMAND="bash build/prebuilts_config.sh && hb build audio_framework -i"
 UT_BUILD_COMMAND="hb build audio_framework -t"
 : "${AUDIO_FRAMEWORK_DIR:=}"
 
+WORKSPACE_DIR="$(pwd)"
+TARGET_DIR="$WORKSPACE_DIR/foundation/multimedia/audio_framework"
+TARGET_PARENT_DIR="$(dirname "$TARGET_DIR")"
+
 if [ ! -d .repo ]; then
   repo init -u "$MANIFEST_REPO" -b "$BASE_REF" --no-repo-verify
+fi
+
+# On reused /work volumes, a previous run may have replaced the project path
+# with a symlink to an external directory. This breaks `repo sync` checkout.
+if [ -L "$TARGET_DIR" ]; then
+  echo "Found existing symlink at $TARGET_DIR; removing before repo sync"
+  rm -f "$TARGET_DIR"
 fi
 
 repo sync -c build multimedia_audio_framework
@@ -18,9 +29,6 @@ echo "repo sync finished for: build multimedia_audio_framework"
 echo "Synced repositories with manifest: $MANIFEST_REPO @ $BASE_REF"
 
 
-WORKSPACE_DIR="$(pwd)"
-TARGET_DIR="$WORKSPACE_DIR/foundation/multimedia/audio_framework"
-TARGET_PARENT_DIR="$(dirname "$TARGET_DIR")"
 if [ -n "$AUDIO_FRAMEWORK_DIR" ]; then
   if [ ! -d "$AUDIO_FRAMEWORK_DIR" ]; then
     echo "::error::AUDIO_FRAMEWORK_DIR does not exist: $AUDIO_FRAMEWORK_DIR"
