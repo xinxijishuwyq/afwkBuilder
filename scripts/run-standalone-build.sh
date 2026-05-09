@@ -3,8 +3,6 @@ set -euo pipefail
 
 MANIFEST_REPO="https://gitcode.com/openharmony/manifest.git"
 : "${BASE_REF:=master}"
-BUILD_COMMAND="bash build/prebuilts_config.sh && hb build audio_framework -i"
-UT_BUILD_COMMAND="hb build audio_framework -t"
 : "${AUDIO_FRAMEWORK_DIR:=}"
 
 WORKSPACE_DIR="$(pwd)"
@@ -95,5 +93,18 @@ ensure_python_deps() {
 
 ensure_hb
 ensure_python_deps
-$BUILD_COMMAND
-$UT_BUILD_COMMAND
+
+echo "Run prebuilts config from workspace root: $WORKSPACE_DIR"
+bash build/prebuilts_config.sh
+
+echo "Run hb build from audio framework directory: $TARGET_DIR"
+(
+  cd "$TARGET_DIR"
+  hb build audio_framework -i
+)
+
+echo "Run hb test build from audio framework directory: $TARGET_DIR"
+(
+  cd "$TARGET_DIR"
+  hb build audio_framework -t
+)
