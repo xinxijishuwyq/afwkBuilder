@@ -31,9 +31,8 @@ USAGE
 fi
 
 if [ -z "$HB_BUILD_COMMAND" ]; then
-  echo "::error::No hb build command provided."
-  echo "::error::Pass command arguments, or set HB_BUILD_COMMAND env."
-  exit 1
+  HB_BUILD_COMMAND="hb build audio_framework -i"
+  echo "HB_BUILD_COMMAND is empty, using default command: $HB_BUILD_COMMAND"
 fi
 
 WORKSPACE_DIR="$(pwd)"
@@ -55,9 +54,9 @@ if [ -L "$TARGET_DIR" ]; then
   rm -f "$TARGET_DIR"
 fi
 
-repo sync -c build
+repo sync -c build foundation/multimedia/audio_framework
 
-echo "repo sync finished for: build"
+echo "repo sync finished for: build foundation/multimedia/audio_framework"
 
 echo "Synced repositories with manifest: $MANIFEST_REPO @ $BASE_REF"
 

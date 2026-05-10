@@ -71,9 +71,9 @@ docker run --rm -it \
 容器内脚本会按固定流程执行：
 
 1. `repo init` 拉取 OpenHarmony manifest。
-2. `repo sync` 同步所需项目（固定执行 `repo sync -c build`）。
+2. `repo sync` 同步所需项目（固定执行 `repo sync -c build foundation/multimedia/audio_framework`）。
 3. 固定执行预构建环境配置：`bash build/prebuilts_config.sh`。
-4. 执行外部传入的 `hb` 编译命令（参数或 `HB_BUILD_COMMAND`）。
+4. 执行 `hb` 编译命令（优先使用脚本参数或 `HB_BUILD_COMMAND`，为空时默认执行 `hb build audio_framework -i`）。
    - 示例：`./scripts/run-standalone-build.sh hb build audio_framework -i`
    - 示例：`./scripts/run-standalone-build.sh hb build audio_framework -t`
    - 示例：`HB_BUILD_COMMAND="hb build audio_framework -i && hb build audio_framework -t" ./scripts/run-standalone-build.sh`
