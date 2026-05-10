@@ -39,9 +39,9 @@ docker run --rm -it \
 1. `repo init` 拉取 OpenHarmony manifest。
 2. `repo sync` 同步所需项目（固定执行 `repo sync -c build multimedia_audio_framework`）。
 3. 执行独立构建命令：
-   - `bash build/prebuilts_config.sh && hb build --product-name rk3568 audio_framework -i`
+   - `bash build/prebuilts_config.sh && hb build audio_framework -i`
 4. 执行一次测试编译：
-   - `hb build --product-name rk3568 audio_framework -t`
+   - `hb build audio_framework -t`
 
 ## 说明
 
