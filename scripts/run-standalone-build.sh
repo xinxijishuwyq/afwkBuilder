@@ -42,22 +42,9 @@ if [ -n "$AUDIO_FRAMEWORK_DIR" ]; then
 
   mkdir -p "$TARGET_PARENT_DIR"
   rm -rf "$TARGET_DIR"
-  mkdir -p "$TARGET_PARENT_DIR"
-  ln -s "$AUDIO_FRAMEWORK_DIR" "$TARGET_DIR"
-
-  if [ ! -L "$TARGET_DIR" ]; then
-    echo "::error::Failed to create symlink: $TARGET_DIR"
-    exit 1
-  fi
-
-  LINK_TARGET="$(readlink "$TARGET_DIR")"
-  if [ "$LINK_TARGET" != "$AUDIO_FRAMEWORK_DIR" ]; then
-    echo "::error::Symlink target mismatch: expected=$AUDIO_FRAMEWORK_DIR actual=$LINK_TARGET"
-    exit 1
-  fi
-
-  echo "Using external audio framework directory: $AUDIO_FRAMEWORK_DIR"
-  echo "Symlink verified: $TARGET_DIR -> $LINK_TARGET"
+  mkdir -p "$TARGET_DIR"
+  rsync -a --delete "$AUDIO_FRAMEWORK_DIR"/ "$TARGET_DIR"/
+  echo "Using external audio framework directory via rsync: $AUDIO_FRAMEWORK_DIR -> $TARGET_DIR"
 fi
 
 if [ ! -d "$TARGET_DIR" ]; then
