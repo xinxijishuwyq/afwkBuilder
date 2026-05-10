@@ -31,6 +31,7 @@ docker run --rm -it \
 - `BASE_REF`：同步使用的分支/标签（默认 `master`）。
 - `AUDIO_FRAMEWORK_DIR`：容器内外部 `audio_framework` 目录；用于挂载本地修改源码。脚本会使用 `rsync` 覆盖 `foundation/multimedia/audio_framework`，避免 `hb` 不遍历软链接目录的问题。
 - 脚本内固定执行：`repo sync -c build`（仅同步独立构建所需项目，`audio_framework` 代码由 `AUDIO_FRAMEWORK_DIR` 提供）。
+- 首次执行 `repo init` 时，脚本会为该命令临时注入 Git 身份环境变量，避免交互式报错，不会修改容器内全局 Git 配置。
 
 ## 构建流程
 
