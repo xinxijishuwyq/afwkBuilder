@@ -30,14 +30,14 @@ docker run --rm -it \
 
 - `BASE_REF`：同步使用的分支/标签（默认 `master`）。
 - `AUDIO_FRAMEWORK_DIR`：容器内外部 `audio_framework` 目录；用于挂载本地修改源码。脚本会使用 `rsync` 覆盖 `foundation/multimedia/audio_framework`，避免 `hb` 不遍历软链接目录的问题。
-- 脚本内固定执行：`repo sync -c build multimedia_audio_framework`（先拉取 audio_framework 基线，再按需覆盖本地代码）。
+- 脚本内固定执行：`repo sync -c build`（仅同步独立构建所需项目，`audio_framework` 代码由 `AUDIO_FRAMEWORK_DIR` 提供）。
 
 ## 构建流程
 
 容器内脚本会按固定流程执行：
 
 1. `repo init` 拉取 OpenHarmony manifest。
-2. `repo sync` 同步所需项目（固定执行 `repo sync -c build multimedia_audio_framework`）。
+2. `repo sync` 同步所需项目（固定执行 `repo sync -c build`）。
 3. 执行独立构建命令：
    - `bash build/prebuilts_config.sh && hb set -p rk3568 && hb build audio_framework -i`
 4. 执行一次测试编译：

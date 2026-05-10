@@ -22,9 +22,9 @@ if [ -L "$TARGET_DIR" ]; then
   rm -f "$TARGET_DIR"
 fi
 
-repo sync -c build multimedia_audio_framework
+repo sync -c build
 
-echo "repo sync finished for: build multimedia_audio_framework"
+echo "repo sync finished for: build"
 
 echo "Synced repositories with manifest: $MANIFEST_REPO @ $BASE_REF"
 
