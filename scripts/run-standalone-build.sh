@@ -12,7 +12,11 @@ TARGET_DIR="$WORKSPACE_DIR/foundation/multimedia/audio_framework"
 TARGET_PARENT_DIR="$(dirname "$TARGET_DIR")"
 
 if [ ! -d .repo ]; then
-  repo init -u "$MANIFEST_REPO" -b "$BASE_REF" --no-repo-verify
+  GIT_COMMITTER_NAME="${GIT_COMMITTER_NAME:-repo}" \
+  GIT_COMMITTER_EMAIL="${GIT_COMMITTER_EMAIL:-repo@localhost}" \
+  GIT_AUTHOR_NAME="${GIT_AUTHOR_NAME:-$GIT_COMMITTER_NAME}" \
+  GIT_AUTHOR_EMAIL="${GIT_AUTHOR_EMAIL:-$GIT_COMMITTER_EMAIL}" \
+    repo init -u "$MANIFEST_REPO" -b "$BASE_REF" --no-repo-verify
 fi
 
 # On reused /work volumes, a previous run may have replaced the project path
