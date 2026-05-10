@@ -59,6 +59,22 @@ fi
 
 cd "$WORKSPACE_DIR"
 
+
+ensure_python_cmd() {
+  if command -v python >/dev/null 2>&1; then
+    return
+  fi
+
+  mkdir -p "$HOME/.local/bin"
+  ln -sf "$(command -v python3)" "$HOME/.local/bin/python"
+  export PATH="$HOME/.local/bin:$PATH"
+
+  if ! command -v python >/dev/null 2>&1; then
+    echo "::error::python command is unavailable and could not be shimmed to python3"
+    exit 1
+  fi
+}
+
 ensure_hb() {
   export PATH="$HOME/.local/bin:$PATH"
   if command -v hb >/dev/null 2>&1; then
@@ -85,6 +101,7 @@ ensure_python_deps() {
 
 
 ensure_hb
+ensure_python_cmd
 ensure_python_deps
 $BUILD_COMMAND
 $UT_BUILD_COMMAND
