@@ -23,6 +23,8 @@ docker run --rm -it \
   -e AUDIO_FRAMEWORK_DIR=/external/audio_framework \
   -v "$PWD/workdir:/work" \
   -v "$PWD/my_audio_framework:/external/audio_framework" \
+  -v "$HOME/.hpm:/root/.hpm" \
+  -v "$HOME/.ccache:/root/.ccache" \
   afwk-standalone-builder
 ```
 
@@ -30,6 +32,8 @@ docker run --rm -it \
 
 - `BASE_REF`：同步使用的分支/标签（默认 `master`）。
 - `AUDIO_FRAMEWORK_DIR`：容器内外部 `audio_framework` 目录；用于挂载本地修改源码。脚本会使用 `rsync` 覆盖 `foundation/multimedia/audio_framework`，避免 `hb` 不遍历软链接目录的问题。
+- 推荐挂载本机 `~/.hpm` 到容器 `/root/.hpm`（示例：`-v "$HOME/.hpm:/root/.hpm"`），复用依赖缓存以减少重复下载。
+- 推荐挂载本机 `~/.ccache` 到容器 `/root/.ccache`（示例：`-v "$HOME/.ccache:/root/.ccache"`），复用 C/C++ 编译缓存以缩短增量构建时间。
 - 脚本内固定执行：`repo sync -c build`（仅同步独立构建所需项目，`audio_framework` 代码由 `AUDIO_FRAMEWORK_DIR` 提供）。
 - 首次执行 `repo init` 时，脚本会为该命令临时注入 Git 身份环境变量，避免交互式报错，不会修改容器内全局 Git 配置。
 
