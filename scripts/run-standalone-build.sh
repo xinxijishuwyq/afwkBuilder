@@ -3,8 +3,8 @@ set -euo pipefail
 
 MANIFEST_REPO="https://gitcode.com/openharmony/manifest.git"
 : "${BASE_REF:=master}"
-BUILD_COMMAND="bash build/prebuilts_config.sh && hb build audio_framework -i"
-UT_BUILD_COMMAND="hb build audio_framework -t"
+BUILD_COMMAND="bash build/prebuilts_config.sh && hb build --product-name rk3568 audio_framework -i"
+UT_BUILD_COMMAND="hb build --product-name rk3568 audio_framework -t"
 : "${AUDIO_FRAMEWORK_DIR:=}"
 
 WORKSPACE_DIR="$(pwd)"
