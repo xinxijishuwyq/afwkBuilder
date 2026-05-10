@@ -28,6 +28,34 @@ docker run --rm -it \
   afwk-standalone-builder
 ```
 
+示例 A（通过环境变量传入编译命令）：
+
+```bash
+docker run --rm -it \
+  -e BASE_REF=master \
+  -e AUDIO_FRAMEWORK_DIR=/external/audio_framework \
+  -e HB_BUILD_COMMAND="hb build audio_framework -i" \
+  -v "$PWD/workdir:/work" \
+  -v "$PWD/my_audio_framework:/external/audio_framework" \
+  -v "$HOME/.hpm:/root/.hpm" \
+  -v "$HOME/.ccache:/root/.ccache" \
+  afwk-standalone-builder
+```
+
+示例 B（在镜像名后直接传入完整命令参数）：
+
+```bash
+docker run --rm -it \
+  -e BASE_REF=master \
+  -e AUDIO_FRAMEWORK_DIR=/external/audio_framework \
+  -v "$PWD/workdir:/work" \
+  -v "$PWD/my_audio_framework:/external/audio_framework" \
+  -v "$HOME/.hpm:/root/.hpm" \
+  -v "$HOME/.ccache:/root/.ccache" \
+  afwk-standalone-builder \
+  hb build audio_framework -t
+```
+
 ## 参数说明
 
 - `BASE_REF`：同步使用的分支/标签（默认 `master`）。
@@ -36,6 +64,7 @@ docker run --rm -it \
 - 推荐挂载本机 `~/.ccache` 到容器 `/root/.ccache`（示例：`-v "$HOME/.ccache:/root/.ccache"`），复用 C/C++ 编译缓存以缩短增量构建时间。
 - 脚本内固定执行：`repo sync -c build`（仅同步独立构建所需项目，`audio_framework` 代码由 `AUDIO_FRAMEWORK_DIR` 提供）。
 - 首次执行 `repo init` 时，脚本会为该命令临时注入 Git 身份环境变量，避免交互式报错，不会修改容器内全局 Git 配置。
+- `scripts/run-standalone-build.sh` 的 `hb` 编译命令由外部传入：可通过脚本参数或 `HB_BUILD_COMMAND` 环境变量传入，脚本内部直接执行。
 
 ## 构建流程
 
@@ -43,10 +72,11 @@ docker run --rm -it \
 
 1. `repo init` 拉取 OpenHarmony manifest。
 2. `repo sync` 同步所需项目（固定执行 `repo sync -c build`）。
-3. 执行独立构建命令：
-   - `bash build/prebuilts_config.sh && hb set -p rk3568 && hb build audio_framework -i`
-4. 执行一次测试编译：
-   - `hb build audio_framework -t`
+3. 固定执行预构建环境配置：`bash build/prebuilts_config.sh`。
+4. 执行外部传入的 `hb` 编译命令（参数或 `HB_BUILD_COMMAND`）。
+   - 示例：`./scripts/run-standalone-build.sh hb build audio_framework -i`
+   - 示例：`./scripts/run-standalone-build.sh hb build audio_framework -t`
+   - 示例：`HB_BUILD_COMMAND="hb build audio_framework -i && hb build audio_framework -t" ./scripts/run-standalone-build.sh`
 
 ## 说明
 

@@ -3,9 +3,38 @@ set -euo pipefail
 
 MANIFEST_REPO="https://gitcode.com/openharmony/manifest.git"
 : "${BASE_REF:=master}"
-BUILD_COMMAND="bash build/prebuilts_config.sh && hb build audio_framework -i"
-UT_BUILD_COMMAND="hb build audio_framework -t"
 : "${AUDIO_FRAMEWORK_DIR:=}"
+
+HB_BUILD_COMMAND="${HB_BUILD_COMMAND:-}"
+
+if [ "$#" -gt 0 ]; then
+  if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
+    cat <<'USAGE'
+Usage: run-standalone-build.sh [hb build command...]
+
+Examples:
+  run-standalone-build.sh hb build audio_framework -i
+  run-standalone-build.sh hb build audio_framework -t
+  run-standalone-build.sh "hb build audio_framework -i && hb build audio_framework -t"
+
+You can also pass the command by env var:
+  HB_BUILD_COMMAND="hb build audio_framework -i" run-standalone-build.sh
+
+Notes:
+  - bash build/prebuilts_config.sh is always executed before your hb command.
+  - If both argv command and HB_BUILD_COMMAND are provided, argv command wins.
+USAGE
+    exit 0
+  fi
+
+  HB_BUILD_COMMAND="$*"
+fi
+
+if [ -z "$HB_BUILD_COMMAND" ]; then
+  echo "::error::No hb build command provided."
+  echo "::error::Pass command arguments, or set HB_BUILD_COMMAND env."
+  exit 1
+fi
 
 WORKSPACE_DIR="$(pwd)"
 TARGET_DIR="$WORKSPACE_DIR/foundation/multimedia/audio_framework"
@@ -103,5 +132,8 @@ ensure_python_deps() {
 ensure_hb
 ensure_python_cmd
 ensure_python_deps
-$BUILD_COMMAND
-$UT_BUILD_COMMAND
+
+bash build/prebuilts_config.sh
+
+echo "Executing external build command: $HB_BUILD_COMMAND"
+bash -lc "$HB_BUILD_COMMAND"
