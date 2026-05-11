@@ -57,11 +57,7 @@ if [ -L "$TARGET_DIR" ]; then
 fi
 
 if [ -z "${SYNC_PROJECTS:-}" ]; then
-  if [ -n "$WARMUP_BUILD_COMMAND" ] && [ "$WARMUP_BUILD_COMMAND" != ":" ]; then
-    SYNC_PROJECTS="build multimedia_audioframework"
-  else
-    SYNC_PROJECTS="build"
-  fi
+  SYNC_PROJECTS="build"
 fi
 read -r -a SYNC_PROJECT_LIST <<< "$SYNC_PROJECTS"
 repo sync -c "${SYNC_PROJECT_LIST[@]}"
