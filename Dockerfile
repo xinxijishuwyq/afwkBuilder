@@ -95,4 +95,10 @@ WORKDIR /work
 COPY scripts/run-standalone-build.sh /usr/local/bin/run-standalone-build.sh
 RUN chmod +x /usr/local/bin/run-standalone-build.sh
 
+ARG PREBUILD_HB_CACHE=1
+ARG BASE_REF=master
+RUN if [ "$PREBUILD_HB_CACHE" = "1" ]; then \
+      BASE_REF="$BASE_REF" HB_BUILD_COMMAND=":" /usr/local/bin/run-standalone-build.sh; \
+    fi
+
 ENTRYPOINT ["/usr/local/bin/run-standalone-build.sh"]
