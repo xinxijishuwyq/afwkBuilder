@@ -6,7 +6,7 @@ MANIFEST_REPO="https://gitcode.com/openharmony/manifest.git"
 : "${AUDIO_FRAMEWORK_DIR:=}"
 
 HB_BUILD_COMMAND="${HB_BUILD_COMMAND:-}"
-WARMUP_BUILD_COMMAND="${WARMUP_BUILD_COMMAND:-hb build audio_framework -i}"
+WARMUP_BUILD_COMMAND="${WARMUP_BUILD_COMMAND:-:}"
 
 if [ "$#" -gt 0 ]; then
   if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then

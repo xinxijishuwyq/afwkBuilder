@@ -61,7 +61,7 @@ docker run --rm -it \
 - 脚本默认根据是否预热自动选择 `repo sync -c` 项目（预热开启=`build multimedia_audio_framework`，非预热=`build`）；`audio_framework` 代码仍可由 `AUDIO_FRAMEWORK_DIR` 提供。
 - 首次执行 `repo init` 时，脚本会为该命令临时注入 Git 身份环境变量，避免交互式报错，不会修改容器内全局 Git 配置。
 - `scripts/run-standalone-build.sh` 的 `hb` 编译命令由外部传入：可通过脚本参数或 `HB_BUILD_COMMAND` 环境变量传入，脚本内部直接执行。
-- `WARMUP_BUILD_COMMAND`：运行容器时的缓存预热命令，默认 `hb build audio_framework -i`。如需自定义可通过环境变量覆盖。
+- `WARMUP_BUILD_COMMAND`：运行容器时的缓存预热命令，默认 `:`（跳过预热）。如需在运行容器时预热，可设置为 `hb build audio_framework -i` 或自定义命令。
 - `PREBUILD_HB_CACHE`：镜像构建阶段是否预热缓存（默认 `1`，执行一次 `hb build audio_framework -i`）。
 - `SYNC_PROJECTS`：`repo sync -c` 的项目列表。未显式设置时：预热开启默认 `build multimedia_audio_framework`，非预热场景默认仅 `build`。
 
@@ -72,7 +72,7 @@ docker run --rm -it \
 1. `repo init` 拉取 OpenHarmony manifest。
 2. `repo sync` 同步所需项目（默认根据是否预热自动选择：预热开启=`build multimedia_audio_framework`，非预热=`build`；也可通过 `SYNC_PROJECTS` 覆盖）。
 3. 固定执行预构建环境配置：`bash build/prebuilts_config.sh`。
-4. 先执行缓存预热命令：`hb build audio_framework -i`（可通过 `WARMUP_BUILD_COMMAND` 覆盖）。
+4. 先执行缓存预热命令：默认跳过（`WARMUP_BUILD_COMMAND=:`）；如设置为其它命令则先执行预热。
 5. 再执行外部传入的 `hb` 编译命令（参数或 `HB_BUILD_COMMAND`）。
    - 示例：`./scripts/run-standalone-build.sh hb build audio_framework -i`
    - 示例：`./scripts/run-standalone-build.sh hb build audio_framework -t`
