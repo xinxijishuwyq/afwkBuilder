@@ -14,12 +14,12 @@ if [ "$#" -gt 0 ]; then
 Usage: run-standalone-build.sh [hb build command...]
 
 Examples:
+  run-standalone-build.sh hb build audio_framework -i -t
   run-standalone-build.sh hb build audio_framework -i
   run-standalone-build.sh hb build audio_framework -t
-  run-standalone-build.sh "hb build audio_framework -i && hb build audio_framework -t"
 
 You can also pass the command by env var:
-  HB_BUILD_COMMAND="hb build audio_framework -i" run-standalone-build.sh
+  HB_BUILD_COMMAND="hb build audio_framework -i -t" run-standalone-build.sh
 
 Notes:
   - bash build/prebuilts_config.sh is always executed before your hb command.
