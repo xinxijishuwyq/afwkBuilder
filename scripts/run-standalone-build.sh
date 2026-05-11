@@ -58,7 +58,7 @@ fi
 
 if [ -z "${SYNC_PROJECTS:-}" ]; then
   if [ -n "$WARMUP_BUILD_COMMAND" ] && [ "$WARMUP_BUILD_COMMAND" != ":" ]; then
-    SYNC_PROJECTS="build multimedia_audioframework"
+    SYNC_PROJECTS="build multimedia_audio_framework"
   else
     SYNC_PROJECTS="build"
   fi
