@@ -6,6 +6,7 @@ MANIFEST_REPO="https://gitcode.com/openharmony/manifest.git"
 : "${AUDIO_FRAMEWORK_DIR:=}"
 
 HB_BUILD_COMMAND="${HB_BUILD_COMMAND:-}"
+WARMUP_BUILD_COMMAND="${WARMUP_BUILD_COMMAND:-hb build audio_framework -i}"
 
 if [ "$#" -gt 0 ]; then
   if [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
@@ -55,9 +56,17 @@ if [ -L "$TARGET_DIR" ]; then
   rm -f "$TARGET_DIR"
 fi
 
-repo sync -c build
+if [ -z "${SYNC_PROJECTS:-}" ]; then
+  if [ -n "$WARMUP_BUILD_COMMAND" ] && [ "$WARMUP_BUILD_COMMAND" != ":" ]; then
+    SYNC_PROJECTS="build multimedia_audioframework"
+  else
+    SYNC_PROJECTS="build"
+  fi
+fi
+read -r -a SYNC_PROJECT_LIST <<< "$SYNC_PROJECTS"
+repo sync -c "${SYNC_PROJECT_LIST[@]}"
 
-echo "repo sync finished for: build"
+echo "repo sync finished for: $SYNC_PROJECTS"
 
 echo "Synced repositories with manifest: $MANIFEST_REPO @ $BASE_REF"
 
@@ -134,6 +143,13 @@ ensure_python_cmd
 ensure_python_deps
 
 bash build/prebuilts_config.sh
+
+if [ -n "$WARMUP_BUILD_COMMAND" ] && [ "$WARMUP_BUILD_COMMAND" != ":" ]; then
+  echo "Executing warm-up build command for cache: $WARMUP_BUILD_COMMAND"
+  bash -lc "$WARMUP_BUILD_COMMAND"
+else
+  echo "Skipping warm-up build command (WARMUP_BUILD_COMMAND=$WARMUP_BUILD_COMMAND)"
+fi
 
 echo "Executing external build command: $HB_BUILD_COMMAND"
 bash -lc "$HB_BUILD_COMMAND"
