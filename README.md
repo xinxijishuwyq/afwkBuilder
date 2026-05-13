@@ -15,6 +15,12 @@
 docker build -t afwk-standalone-builder .
 ```
 
+如需在镜像构建阶段关闭 `-t`（改为 `hb build audio_framework -i`）：
+
+```bash
+docker build --build-arg WARMUP_ENABLE_T=0 -t afwk-standalone-builder .
+```
+
 如需跳过镜像构建阶段预热：
 
 ```bash
@@ -63,6 +69,7 @@ docker run --rm -it \
 - `scripts/run-standalone-build.sh` 的 `hb` 编译命令由外部传入：可通过脚本参数或 `HB_BUILD_COMMAND` 环境变量传入，脚本内部直接执行。建议常用 `hb build audio_framework -i -t`。
 - `WARMUP_BUILD_COMMAND`：运行容器时的缓存预热命令，默认 `:`（跳过预热）。如需在运行容器时预热，可设置为 `hb build audio_framework -i -t` 或自定义命令。
 - `PREBUILD_HB_CACHE`：镜像构建阶段是否预热缓存（默认 `1`，执行一次 `hb build audio_framework -i -t`）。
+- `WARMUP_ENABLE_T`：镜像构建阶段预热命令是否携带 `-t`（默认 `1`，预热命令为 `hb build audio_framework -i -t`；设为 `0` 时为 `hb build audio_framework -i`）。
 - `SYNC_PROJECTS`：`repo sync -c` 的项目列表。未显式设置时：预热开启默认 `build multimedia_audio_framework`，非预热场景默认仅 `build`。
 
 ## 构建流程

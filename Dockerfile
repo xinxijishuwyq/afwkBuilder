@@ -97,8 +97,10 @@ RUN chmod +x /usr/local/bin/run-standalone-build.sh
 
 ARG PREBUILD_HB_CACHE=1
 ARG BASE_REF=master
+ARG WARMUP_ENABLE_T=1
 RUN if [ "$PREBUILD_HB_CACHE" = "1" ]; then \
-      BASE_REF="$BASE_REF" WARMUP_BUILD_COMMAND="hb build audio_framework -i -t" HB_BUILD_COMMAND=":" /usr/local/bin/run-standalone-build.sh; \
+      if [ "$WARMUP_ENABLE_T" = "1" ]; then WARMUP_CMD="hb build audio_framework -i -t"; else WARMUP_CMD="hb build audio_framework -i"; fi; \
+      BASE_REF="$BASE_REF" WARMUP_BUILD_COMMAND="$WARMUP_CMD" HB_BUILD_COMMAND=":" /usr/local/bin/run-standalone-build.sh; \
     fi
 
 ENTRYPOINT ["/usr/local/bin/run-standalone-build.sh"]
